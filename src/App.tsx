@@ -7,7 +7,7 @@ import { getDefaultExternalAdapters } from "@web3auth/default-solana-adapter";
 import RPC from "./solanaRPC";
 import "./App.css";
 
-const clientId = "BPi5PB_UiIZ-cPz1GtV5i1I2iOSOHuimiXBI0e-Oe_u6X3oVAbCiAZOTEBtTXw4tsluTITPqA8zMsfxIKMjiqNQ"; // get from https://dashboard.web3auth.io
+const clientId = "BOL99KcIx-1Ae5DNJ8IzsygwuIeuVwccksAz5ghNaEPTwXBorHh0t20jivw1nDYaE1txI8r6GXuZ1ZHZKavCFv4"; // get from https://dashboard.web3auth.io
 let defaultSolanaAdapters: IAdapter<unknown>[] = [];
 function App() {
   const [web3auth, setWeb3auth] = useState<Web3AuthNoModal | null>(null);
@@ -33,7 +33,7 @@ function App() {
         const web3authOptions: IWeb3AuthCoreOptions = {
           clientId,
           privateKeyProvider,
-          web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_MAINNET,
+          web3AuthNetwork: WEB3AUTH_NETWORK.SAPPHIRE_DEVNET,
         };
         const web3auth = new Web3AuthNoModal(web3authOptions);
 
