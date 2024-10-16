@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { Web3AuthNoModal } from "@web3auth/no-modal";
 import { EthereumPrivateKeyProvider } from "@web3auth/ethereum-provider";
 import {
@@ -13,7 +13,14 @@ import "./App.css";
 // import RPC from './evm.web3';
 import RPC from "./evm.viem";
 // import RPC from "./evm.ethers";
-
+import {
+  ConnectionProvider,
+  WalletProvider,
+} from "@solana/wallet-adapter-react";
+import { PhantomWalletAdapter } from "@solana/wallet-adapter-wallets";
+import { clusterApiUrl } from "@solana/web3.js";
+import { WalletConnect } from "./walletConnect";
+import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 const clientId =
   "BOL99KcIx-1Ae5DNJ8IzsygwuIeuVwccksAz5ghNaEPTwXBorHh0t20jivw1nDYaE1txI8r6GXuZ1ZHZKavCFv4"; // get from https://dashboard.web3auth.io
 
@@ -21,7 +28,11 @@ function App() {
   const [web3auth, setWeb3auth] = useState<Web3AuthNoModal | null>(null);
   const [provider, setProvider] = useState<IProvider | null>(null);
   const [loggedIn, setLoggedIn] = useState<boolean | null>(false);
+  // 设置连接到 Solana 网络
+  const network = clusterApiUrl("mainnet-beta");
 
+  // 配置 Phantom 钱包适配器
+  const wallets = useMemo(() => [new PhantomWalletAdapter()], []);
   useEffect(() => {
     const init = async () => {
       try {
@@ -85,7 +96,26 @@ function App() {
     const data = await res.json();
     return data?.token;
   };
-
+  const getIdTokenWithSign = async (
+    address: any,
+    message: any,
+    signMes: any
+  ) => {
+    // Get ID Token from server
+    const res = await fetch("http://localhost:8080/api/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        address: address,
+        message: message,
+        signature: signMes,
+      }),
+    });
+    const data = await res.json();
+    return data?.token;
+  };
   const login = async () => {
     if (!web3auth) {
       uiConsole("web3auth not initialized yet");
@@ -104,7 +134,24 @@ function App() {
     });
     setProvider(web3authProvider);
   };
+  const loginWithSign = async (address: any, message: any, signMes: any) => {
+    if (!web3auth) {
+      uiConsole("web3auth not initialized yet");
+      return;
+    }
+    const idToken = await getIdTokenWithSign(address, message, signMes);
+    console.log(idToken);
 
+    const web3authProvider = await web3auth.connectTo(WALLET_ADAPTERS.AUTH, {
+      loginProvider: "jwt",
+      extraLoginOptions: {
+        id_token: idToken,
+        verifierIdField: "sub",
+        domain: "http://localhost:3000",
+      },
+    });
+    setProvider(web3authProvider);
+  };
   const authenticateUser = async () => {
     if (!web3auth) {
       uiConsole("web3auth not initialized yet");
@@ -241,40 +288,54 @@ function App() {
     </>
   );
 
+  const signAndPost = async (
+    publickey: any,
+    message: any,
+    signMessage: any
+  ) => {
+    console.log("prepare to post", publickey, message, signMessage);
+    await loginWithSign(publickey, message, signMessage);
+  };
   const logoutView = (
-    <button onClick={login} className="card">
-      Login
-    </button>
+    // <button onClick={login} className="card">
+    //   Login
+    // </button>
+    <WalletConnect signAndPost={signAndPost} />
   );
-
   return (
-    <div className="container">
-      <h1 className="title">
-        <a
-          target="_blank"
-          href="https://web3auth.io/docs/sdk/pnp/web/no-modal"
-          rel="noreferrer"
-        >
-          Web3Auth
-        </a>{" "}
-        & React-Express Custom JWT Login
-      </h1>
+    <ConnectionProvider endpoint={network}>
+      <WalletProvider wallets={wallets} autoConnect>
+        <WalletModalProvider>
+          <div className="container">
+            <h1 className="title">
+              <a
+                target="_blank"
+                href="https://web3auth.io/docs/sdk/pnp/web/no-modal"
+                rel="noreferrer"
+              >
+                Web3Auth
+              </a>{" "}
+              & React-Express Custom JWT Login
+            </h1>
 
-      <div className="grid">{loggedIn ? loginView : logoutView}</div>
+            <div className="grid">{loggedIn ? loginView : logoutView}</div>
 
-      <footer className="footer">
-        <a
-          href="https://github.com/Web3Auth/web3auth-pnp-examples/tree/main/web-no-modal-sdk/custom-authentication/single-verifier-examples/custom-jwt-no-modal-example"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Source code
-        </a>
-        <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWeb3Auth%2Fweb3auth-pnp-examples%2Ftree%2Fmain%2Fweb-no-modal-sdk%2Fcustom-authentication%2Fsingle-verifier-examples%2Fauth0-no-modal-example&project-name=w3a-custom-jwt-no-modal&repository-name=w3a-custom-jwt-no-modal">
-          <img src="https://vercel.com/button" alt="Deploy with Vercel" />
-        </a>
-      </footer>
-    </div>
+            <footer className="footer">
+              <a
+                href="https://github.com/Web3Auth/web3auth-pnp-examples/tree/main/web-no-modal-sdk/custom-authentication/single-verifier-examples/custom-jwt-no-modal-example"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Source code
+              </a>
+              <a href="https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FWeb3Auth%2Fweb3auth-pnp-examples%2Ftree%2Fmain%2Fweb-no-modal-sdk%2Fcustom-authentication%2Fsingle-verifier-examples%2Fauth0-no-modal-example&project-name=w3a-custom-jwt-no-modal&repository-name=w3a-custom-jwt-no-modal">
+                <img src="https://vercel.com/button" alt="Deploy with Vercel" />
+              </a>
+            </footer>
+          </div>
+        </WalletModalProvider>
+      </WalletProvider>
+    </ConnectionProvider>
   );
 }
 

@@ -20,10 +20,12 @@ app.get('/.well-known/jwks.json', (req, res) => {
     res.status(200).json({ keys: [jwk] });
 });
 app.post('/api/token', async (req, res) => {
+
 	try {
 		var privateKey = fs.readFileSync('privateKey.pem');
 		var token = jwt.sign(
 			{
+				address:'solanana-address',
 				sub: '9fcd68c4-af50-4dd7-adf6-abd12a13cb32',
 				name: 'Yashovardhan Agrawal',
 				email: 'yash@web3auth.io',
